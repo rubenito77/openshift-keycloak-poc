@@ -1,0 +1,60 @@
+apiVersion: k8s.keycloak.org/v2beta1
+kind: KeycloakRealmImport
+metadata:
+  name: platform-realm
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/name: platform-realm
+    app.kubernetes.io/part-of: keycloak-lab
+spec:
+  keycloakCRName: keycloak
+  realm:
+    id: platform
+    realm: platform
+    displayName: Platform Engineering
+    enabled: true
+    sslRequired: external
+    registrationAllowed: false
+    registrationEmailAsUsername: false
+    rememberMe: true
+    verifyEmail: false
+    loginWithEmailAllowed: true
+    duplicateEmailsAllowed: false
+    resetPasswordAllowed: true
+    editUsernameAllowed: false
+    accessTokenLifespan: 300
+    ssoSessionIdleTimeout: 1800
+    ssoSessionMaxLifespan: 36000
+    offlineSessionIdleTimeout: 2592000
+    bruteForceProtected: true
+    permanentLockout: false
+    failureFactor: 5
+    waitIncrementSeconds: 60
+    minimumQuickLoginWaitSeconds: 60
+    quickLoginCheckMilliSeconds: 1000
+    maxFailureWaitSeconds: 900
+    maxDeltaTimeSeconds: 43200
+    eventsEnabled: true
+    eventsListeners:
+      - jboss-logging
+    adminEventsEnabled: true
+    adminEventsDetailsEnabled: true
+    roles:
+      realm:
+        - name: platform-admin
+          description: Administración completa de la plataforma
+        - name: platform-operator
+          description: Operación cotidiana de la plataforma
+        - name: platform-user
+          description: Acceso estándar a aplicaciones
+    groups:
+      - name: platform-admins
+        realmRoles:
+          - platform-admin
+      - name: platform-operators
+        realmRoles:
+          - platform-operator
+      - name: platform-users
+        realmRoles:
+          - platform-user
+
