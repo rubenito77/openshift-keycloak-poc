@@ -56,7 +56,7 @@ INVALID_CODE="$(
     -d scope=openid \
     "${TOKEN_URL}"
 )"
-check_code PRO-03 401 "${INVALID_CODE}"
+check_code PRO-03 400 "${INVALID_CODE}"
 
 AUTHORIZED_TOKEN="$(
   curl -fsS \
@@ -113,4 +113,3 @@ unset AUTHORIZED_TOKEN DENIED_TOKEN
 
 printf '\nResultado: %s PASS / %s FAIL\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
-
