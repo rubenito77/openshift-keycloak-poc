@@ -1,16 +1,26 @@
 # Aplicaciones de demostración
 
-La POC desplegará el mismo backend en dos variantes para que la comparación sea directa:
+La POC ejecuta el mismo backend en dos variantes:
 
-| Variante | Route | Comportamiento sin sesión |
+| Variante | Exposición | Acceso anónimo |
 |---|---|---|
-| Pública | `app-public.<apps-domain>` | Responde `HTTP 200` directamente |
-| Protegida | `app-protected.<apps-domain>` | Redirige a Keycloak y no entrega la aplicación |
+| `app-public` | Route directa al backend | `HTTP 200` |
+| `app-protected` | Route hacia OAuth2 Proxy | `HTTP 302` hacia Keycloak |
 
-La aplicación protegida utilizará OpenID Connect Authorization Code Flow con PKCE contra el
-realm `platform`. Ambas variantes mostrarán la misma página; la protegida añadirá la identidad,
-roles y claims recibidos de Keycloak.
+La variante protegida utiliza OAuth2 Proxy 7.15.2 con el provider `keycloak-oidc`,
+Authorization Code + PKCE y autorización por el realm role `platform-user`.
 
-Los manifiestos de las aplicaciones se incorporarán después de validar el cliente OIDC y se
-acompañarán con pruebas automáticas positivas y negativas.
+El backend muestra:
+
+- variante desplegada;
+- usuario y correo propagados por OAuth2 Proxy;
+- presencia de un access token, sin imprimirlo;
+- cabeceras no sensibles recibidas.
+
+`scripts/50-configure-poc.sh` crea un cliente confidencial y dos usuarios:
+
+- `poc-authorized`, con `platform-user`;
+- `poc-denied`, autenticado pero sin el rol requerido.
+
+Las contraseñas se generan aleatoriamente y sólo se guardan en Secrets del clúster.
 
