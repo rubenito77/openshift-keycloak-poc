@@ -112,11 +112,65 @@ trap - EXIT
 oc rollout status deployment/keycloak-operator \
   -n "${KEYCLOAK_NAMESPACE}" \
   --timeout=300s
+
+# La condición Ready del CR puede conservar temporalmente el valor anterior
+# mientras el Operator vuelve a crear el pod. Esperar primero la reconciliación
+# efectiva del StatefulSet evita validar la Route demasiado pronto.
+for _ in $(seq 1 60); do
+  KEYCLOAK_REPLICAS="$(
+    oc get statefulset keycloak \
+      -n "${KEYCLOAK_NAMESPACE}" \
+      -o jsonpath='{.spec.replicas}' 2>/dev/null || true
+  )"
+  [[ "${KEYCLOAK_REPLICAS}" =~ ^[1-9][0-9]*$ ]] && break
+  sleep 5
+done
+
+if [[ ! "${KEYCLOAK_REPLICAS:-}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ERROR: el Operator no reactivó el StatefulSet de Keycloak." >&2
+  exit 1
+fi
+
+oc rollout status statefulset/keycloak \
+  -n "${KEYCLOAK_NAMESPACE}" \
+  --timeout=600s
+oc wait \
+  --for=condition=Ready \
+  pod/keycloak-0 \
+  -n "${KEYCLOAK_NAMESPACE}" \
+  --timeout=600s
 oc wait \
   --for=condition=Ready \
   keycloak/keycloak \
   -n "${KEYCLOAK_NAMESPACE}" \
   --timeout=600s
+
+KEYCLOAK_HOST="${KEYCLOAK_HOST:-$(
+  oc get route \
+    -n "${KEYCLOAK_NAMESPACE}" \
+    -o jsonpath='{.items[0].spec.host}'
+)}"
+DISCOVERY_URL="https://${KEYCLOAK_HOST}/realms/master/.well-known/openid-configuration"
+DISCOVERY_READY=false
+
+for _ in $(seq 1 30); do
+  HTTP_CODE="$(
+    curl -sS \
+      -o /dev/null \
+      -w '%{http_code}' \
+      "${DISCOVERY_URL}" || true
+  )"
+  if [[ "${HTTP_CODE}" == "200" ]]; then
+    DISCOVERY_READY=true
+    break
+  fi
+  sleep 10
+done
+
+if [[ "${DISCOVERY_READY}" != "true" ]]; then
+  echo "ERROR: discovery OIDC no respondió HTTP 200: ${DISCOVERY_URL}" >&2
+  exit 1
+fi
 
 echo "Restauración completada."
 ./scripts/validate-platform.sh
