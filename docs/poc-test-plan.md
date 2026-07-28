@@ -13,7 +13,7 @@ y la misma aplicación protegida mediante Keycloak.
 | PUB-02 | La aplicación pública no envía redirección OIDC | No existe `Location` hacia Keycloak |
 | PRO-01 | Acceso anónimo a la aplicación protegida | `HTTP 302` hacia el realm `platform` |
 | PRO-02 | Credenciales válidas | Login correcto y acceso a la aplicación |
-| PRO-03 | Credenciales inválidas | Acceso denegado |
+| PRO-03 | Credenciales inválidas | `HTTP 400 invalid_grant` |
 | PRO-04 | Usuario sin rol requerido | `HTTP 403` |
 | PRO-05 | Usuario con `platform-user` | `HTTP 200` |
 | PRO-06 | Logout | Sesión invalidada y nuevo acceso redirigido a Keycloak |
