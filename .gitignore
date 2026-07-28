@@ -1,0 +1,6 @@
+.env
+config/lab.env
+*.log
+*.tmp
+secrets/
+
