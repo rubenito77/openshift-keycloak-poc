@@ -15,8 +15,8 @@ misma aplicación: una pública y otra protegida mediante OpenID Connect.
 | PostgreSQL | 15.18, PVC de 5 GiB |
 | Keycloak | Pod listo y Route TLS edge |
 | Realm `platform` | Importado; discovery OIDC responde `HTTP 200` |
-| Aplicación pública | Próxima fase |
-| Aplicación protegida | Próxima fase |
+| Aplicación pública | Implementada en el repositorio |
+| Aplicación protegida | Implementada con OAuth2 Proxy 7.15.2 |
 
 > El dominio de Red Hat Demo Platform es temporal. No se guardan credenciales ni secretos en Git.
 
@@ -35,6 +35,8 @@ flowchart TD
 ```text
 .
 ├── apps/
+│   ├── backend/app.py
+│   ├── manifests/apps.yaml.tpl
 │   └── README.md
 ├── config/
 │   └── lab.env.example
@@ -50,6 +52,9 @@ flowchart TD
 │   ├── 20-install-postgresql.sh
 │   ├── 30-install-keycloak.sh
 │   ├── 40-import-realm.sh
+│   ├── 50-configure-poc.sh
+│   ├── 60-deploy-apps.sh
+│   ├── 70-test-poc.sh
 │   └── validate-platform.sh
 └── README.md
 ```
@@ -192,7 +197,46 @@ Esto limpia el Job temporal y no elimina el realm importado.
 ./scripts/validate-platform.sh
 ```
 
-## 8. Escenario comparativo de aplicaciones
+## 8. Configurar el cliente y usuarios de la POC
+
+```bash
+./scripts/50-configure-poc.sh
+```
+
+El script crea:
+
+- cliente confidencial `app-protected`;
+- redirect URI exacta de OAuth2 Proxy;
+- audience mapper;
+- usuario `poc-authorized` con `platform-user`;
+- usuario `poc-denied` sin el rol;
+- Secrets `app-protected-oidc` y `poc-test-users`.
+
+Las credenciales se generan aleatoriamente y nunca se imprimen ni se almacenan en Git.
+
+> Para automatizar los casos positivos y negativos se habilita Direct Access Grants.
+> Esta opción es exclusiva de la POC y debe deshabilitarse en producción.
+
+## 9. Desplegar ambas aplicaciones
+
+```bash
+./scripts/60-deploy-apps.sh
+```
+
+Verificar:
+
+```bash
+oc get deployment,pods,service,route -n keycloak-poc-apps
+```
+
+Abrir:
+
+```text
+https://app-public.${APPS_DOMAIN}
+https://app-protected.${APPS_DOMAIN}
+```
+
+## 10. Escenario comparativo de aplicaciones
 
 La siguiente fase despliega el mismo backend en dos variantes:
 
@@ -211,6 +255,25 @@ Además se demostrarán:
 
 La matriz completa está en [docs/poc-test-plan.md](docs/poc-test-plan.md).
 
+Ejecutar las comprobaciones:
+
+```bash
+./scripts/70-test-poc.sh
+```
+
+Resultado esperado:
+
+```text
+PASS PUB-01   HTTP 200
+PASS PRO-01   HTTP 302
+PASS PRO-03   HTTP 401
+PASS PRO-05   HTTP 200
+PASS PRO-04   HTTP 403
+PASS TOK-01   issuer correcto
+
+Resultado: 6 PASS / 0 FAIL
+```
+
 ## Seguridad
 
 - No versionar `config/lab.env`.
@@ -222,9 +285,7 @@ La matriz completa está en [docs/poc-test-plan.md](docs/poc-test-plan.md).
 
 ## Próximas fases
 
-1. Verificar y limpiar el Realm Import.
-2. Crear cliente OIDC y usuarios de prueba.
-3. Desplegar la aplicación pública.
-4. Desplegar la aplicación protegida.
-5. Automatizar pruebas positivas y negativas.
-6. Agregar uninstall y backup/restore.
+1. Ejecutar las aplicaciones en el laboratorio OpenShift.
+2. Validar login y logout desde navegador.
+3. Guardar evidencias no sensibles.
+4. Agregar uninstall y backup/restore.
