@@ -30,17 +30,17 @@ ADMIN_PASSWORD="$(
 
 kc() {
   oc exec -n "${KEYCLOAK_NAMESPACE}" "${KEYCLOAK_POD}" -- \
-    /opt/keycloak/bin/kcadm.sh --config "${KC_CONFIG}" "$@"
+    /opt/keycloak/bin/kcadm.sh "$@" --config "${KC_CONFIG}"
 }
 
 oc exec -n "${KEYCLOAK_NAMESPACE}" "${KEYCLOAK_POD}" -- \
   /opt/keycloak/bin/kcadm.sh \
-  --config "${KC_CONFIG}" \
   config credentials \
   --server http://127.0.0.1:8080 \
   --realm master \
   --user "${ADMIN_USER}" \
-  --password "${ADMIN_PASSWORD}" >/dev/null
+  --password "${ADMIN_PASSWORD}" \
+  --config "${KC_CONFIG}" >/dev/null
 
 oc apply -f - <<EOF
 apiVersion: v1
@@ -165,4 +165,3 @@ unset AUTHORIZED_PASSWORD DENIED_PASSWORD
 
 echo "Cliente OIDC, usuarios y Secrets de la POC configurados."
 echo "Direct Access Grants está habilitado sólo para automatizar esta POC."
-
