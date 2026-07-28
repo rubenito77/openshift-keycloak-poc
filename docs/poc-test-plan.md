@@ -21,6 +21,15 @@ y la misma aplicación protegida mediante Keycloak.
 | TOK-02 | Firma del token | Validable mediante `jwks_uri` |
 | TOK-03 | Expiración | Token rechazado después de `exp` |
 
+## Automatización
+
+`scripts/70-test-poc.sh` ejecuta automáticamente `PUB-01`, `PRO-01`, `PRO-03`,
+`PRO-04`, `PRO-05` y `TOK-01`. La prueba de login y logout interactivo se realiza
+posteriormente en el navegador.
+
+Direct Access Grants se habilita sólo para obtener tokens de prueba sin intervención
+humana. Debe deshabilitarse en una implementación productiva.
+
 ## Evidencias
 
 Cada prueba guardará:
@@ -32,4 +41,3 @@ Cada prueba guardará:
 - fecha, versión de OpenShift y versión de Keycloak.
 
 Nunca se almacenarán contraseñas, client secrets, access tokens ni refresh tokens.
-
