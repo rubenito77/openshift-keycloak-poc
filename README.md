@@ -42,7 +42,9 @@ flowchart TD
 ├── config/
 │   └── lab.env.example
 ├── docs/
-│   └── poc-test-plan.md
+│   ├── operations.md
+│   ├── poc-test-plan.md
+│   └── public-to-private-keycloak.md
 ├── manifests/
 │   ├── 00-keycloak-operator.yaml
 │   ├── 20-keycloak.yaml.tpl
@@ -56,6 +58,11 @@ flowchart TD
 │   ├── 50-configure-poc.sh
 │   ├── 60-deploy-apps.sh
 │   ├── 70-test-poc.sh
+│   ├── 80-backup-postgresql.sh
+│   ├── 81-restore-postgresql.sh
+│   ├── 90-enable-observability.sh
+│   ├── 91-validate-observability.sh
+│   ├── 99-uninstall.sh
 │   └── validate-platform.sh
 └── README.md
 ```
@@ -259,6 +266,8 @@ La matriz completa está en [docs/poc-test-plan.md](docs/poc-test-plan.md).
 La guía para convertir una aplicación pública en privada está en
 [docs/public-to-private-keycloak.md](docs/public-to-private-keycloak.md).
 
+La guía operativa está en [docs/operations.md](docs/operations.md).
+
 Ejecutar las comprobaciones:
 
 ```bash
@@ -371,6 +380,49 @@ Limpiar las variables:
 unset AUTHORIZED_USER AUTHORIZED_PASSWORD
 unset DENIED_USER DENIED_PASSWORD
 ```
+
+## 12. Observabilidad
+
+Habilitar métricas y el ServiceMonitor:
+
+```bash
+./scripts/90-enable-observability.sh
+```
+
+Validar health y métricas sin exponer el puerto `9000` por Route:
+
+```bash
+./scripts/91-validate-observability.sh
+```
+
+## 13. Backup y restore
+
+Crear un backup:
+
+```bash
+./scripts/80-backup-postgresql.sh
+```
+
+Restaurar requiere confirmación explícita:
+
+```bash
+./scripts/81-restore-postgresql.sh \
+  backups/keycloak-YYYYMMDDTHHMMSSZ.dump \
+  --confirm-restore
+```
+
+Consultar [docs/operations.md](docs/operations.md) antes de realizar una restauración.
+
+## 14. Desinstalación
+
+La desinstalación crea un backup y elimina ambos namespaces, incluido el PVC:
+
+```bash
+./scripts/99-uninstall.sh --confirm DELETE-KEYCLOAK-POC
+```
+
+No ejecutar durante las validaciones actuales. El comando se conserva para repetir y limpiar
+el laboratorio de manera controlada.
 
 ## Seguridad
 
