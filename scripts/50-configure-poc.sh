@@ -112,6 +112,8 @@ ensure_user() {
   local username="$1"
   local email="$2"
   local password="$3"
+  local first_name="$4"
+  local last_name="$5"
   local user_id
 
   user_id="$(
@@ -124,8 +126,23 @@ ensure_user() {
       -s "username=${username}" \
       -s enabled=true \
       -s "email=${email}" \
+      -s "firstName=${first_name}" \
+      -s "lastName=${last_name}" \
+      -s 'requiredActions=[]' \
       -s emailVerified=true >/dev/null
+    user_id="$(
+      kc get users -r platform -q "username=${username}" |
+      jq -r '.[0].id'
+    )"
   fi
+
+  kc update "users/${user_id}" -r platform \
+    -s enabled=true \
+    -s "email=${email}" \
+    -s "firstName=${first_name}" \
+    -s "lastName=${last_name}" \
+    -s emailVerified=true \
+    -s 'requiredActions=[]' >/dev/null
 
   kc set-password -r platform \
     --username "${username}" \
@@ -133,8 +150,12 @@ ensure_user() {
     --temporary=false >/dev/null
 }
 
-ensure_user poc-authorized poc-authorized@example.com "${AUTHORIZED_PASSWORD}"
-ensure_user poc-denied poc-denied@example.com "${DENIED_PASSWORD}"
+ensure_user \
+  poc-authorized poc-authorized@example.com "${AUTHORIZED_PASSWORD}" \
+  POC Authorized
+ensure_user \
+  poc-denied poc-denied@example.com "${DENIED_PASSWORD}" \
+  POC Denied
 
 kc add-roles -r platform \
   --uusername poc-authorized \
@@ -156,6 +177,15 @@ oc create secret generic poc-test-users \
   --from-literal=denied-password="${DENIED_PASSWORD}" \
   --dry-run=client -o yaml |
 oc apply -f -
+
+if oc get deployment app-protected \
+  -n "${APPS_NAMESPACE}" >/dev/null 2>&1; then
+  oc rollout restart deployment/app-protected \
+    -n "${APPS_NAMESPACE}"
+  oc rollout status deployment/app-protected \
+    -n "${APPS_NAMESPACE}" \
+    --timeout=300s
+fi
 
 oc exec -n "${KEYCLOAK_NAMESPACE}" "${KEYCLOAK_POD}" -- \
   rm -f "${KC_CONFIG}" || true
