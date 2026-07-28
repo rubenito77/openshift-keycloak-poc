@@ -3,5 +3,6 @@ config/lab.env
 *.log
 *.tmp
 secrets/
+backups/
 __pycache__/
 *.pyc
