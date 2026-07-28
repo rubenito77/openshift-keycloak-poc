@@ -15,8 +15,9 @@ misma aplicación: una pública y otra protegida mediante OpenID Connect.
 | PostgreSQL | 15.18, PVC de 5 GiB |
 | Keycloak | Pod listo y Route TLS edge |
 | Realm `platform` | Importado; discovery OIDC responde `HTTP 200` |
-| Aplicación pública | Implementada en el repositorio |
-| Aplicación protegida | Implementada con OAuth2 Proxy 7.15.2 |
+| Aplicación pública | Validada: acceso anónimo `HTTP 200` |
+| Aplicación protegida | Validada con OAuth2 Proxy 7.15.2 |
+| Matriz automática | `6 PASS / 0 FAIL` |
 
 > El dominio de Red Hat Demo Platform es temporal. No se guardan credenciales ni secretos en Git.
 
@@ -255,6 +256,9 @@ Además se demostrarán:
 
 La matriz completa está en [docs/poc-test-plan.md](docs/poc-test-plan.md).
 
+La guía para convertir una aplicación pública en privada está en
+[docs/public-to-private-keycloak.md](docs/public-to-private-keycloak.md).
+
 Ejecutar las comprobaciones:
 
 ```bash
@@ -272,6 +276,100 @@ PASS PRO-04   HTTP 403
 PASS TOK-01   issuer correcto
 
 Resultado: 6 PASS / 0 FAIL
+```
+
+## 11. Pruebas visuales en navegador
+
+### 11.1 Aplicación pública
+
+Abrir:
+
+```text
+https://${PUBLIC_HOST}/
+```
+
+No debe solicitar login. La página debe mostrar:
+
+```text
+variant: public
+authenticated: false
+user: anonymous
+```
+
+Validación JSON:
+
+```bash
+curl -sS "https://${PUBLIC_HOST}/api/whoami" | jq
+```
+
+### 11.2 Aplicación protegida con usuario autorizado
+
+Obtener las credenciales sólo en la terminal local:
+
+```bash
+AUTHORIZED_USER="$(
+  oc get secret poc-test-users -n keycloak-poc-apps \
+    -o jsonpath='{.data.authorized-username}' | base64 -d
+)"
+AUTHORIZED_PASSWORD="$(
+  oc get secret poc-test-users -n keycloak-poc-apps \
+    -o jsonpath='{.data.authorized-password}' | base64 -d
+)"
+printf 'Usuario: %s\n' "${AUTHORIZED_USER}"
+printf 'Password: %s\n' "${AUTHORIZED_PASSWORD}"
+```
+
+Abrir una ventana privada y acceder a:
+
+```text
+https://${PROTECTED_HOST}/
+```
+
+Keycloak debe solicitar login en el realm `platform`. Después de ingresar con
+`poc-authorized`, la aplicación debe mostrar:
+
+```text
+variant: protected
+authenticated: true
+user: poc-authorized
+email: poc-authorized@example.com
+access_token_forwarded: true
+```
+
+### 11.3 Usuario autenticado sin autorización
+
+Cerrar la ventana privada anterior y abrir otra nueva. Obtener las credenciales:
+
+```bash
+DENIED_USER="$(
+  oc get secret poc-test-users -n keycloak-poc-apps \
+    -o jsonpath='{.data.denied-username}' | base64 -d
+)"
+DENIED_PASSWORD="$(
+  oc get secret poc-test-users -n keycloak-poc-apps \
+    -o jsonpath='{.data.denied-password}' | base64 -d
+)"
+printf 'Usuario: %s\n' "${DENIED_USER}"
+printf 'Password: %s\n' "${DENIED_PASSWORD}"
+```
+
+Ingresar en la aplicación protegida con `poc-denied`. Keycloak debe autenticar al
+usuario, pero OAuth2 Proxy debe responder:
+
+```text
+403 Forbidden
+```
+
+Esto demuestra que autenticación y autorización son controles diferentes:
+
+- Keycloak confirma la identidad.
+- OAuth2 Proxy exige el rol `platform-user`.
+
+Limpiar las variables:
+
+```bash
+unset AUTHORIZED_USER AUTHORIZED_PASSWORD
+unset DENIED_USER DENIED_PASSWORD
 ```
 
 ## Seguridad
